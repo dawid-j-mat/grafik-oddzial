@@ -1,0 +1,5 @@
+- Default OFF is implicit: no row = DAY_OFF.
+- Each slot (AM/PM) must have exactly one ADMISSIONS before approval.
+- Absence reasons are stored in `absences` table.
+- All tables must have RLS enabled.
+- Do not log personal data in production.
