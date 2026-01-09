@@ -20,6 +20,74 @@ main {
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
+.schedule-page {
+  max-width: 1200px;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.schedule-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.schedule-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.schedule-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.schedule-section label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.schedule-section select {
+  padding: 0.35rem 0.4rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5f5;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.off-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.off-pill {
+  background: #e2e8f0;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+}
+
 h1 {
   margin-top: 0;
   font-size: 2rem;
