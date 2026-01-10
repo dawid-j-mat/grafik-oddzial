@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 const DOCTORS = [
@@ -122,7 +123,13 @@ export default function SchedulePage() {
 
   return (
     <main className="schedule-page">
-      <h1>Grafik tygodniowy</h1>
+      <header style={{ display: "grid", gap: "0.5rem" }}>
+        <h1>Grafik tygodniowy</h1>
+        <nav style={{ display: "flex", gap: "1rem" }}>
+          <Link href="/">Strona główna</Link>
+          <Link href="/doctors">Lekarze</Link>
+        </nav>
+      </header>
       <p>Wybierz obsadę dla każdego bloku czasowego. Wolne jest wyliczane automatycznie.</p>
       <section className="schedule-grid">
         {assignments.map((item) => {
