@@ -530,7 +530,12 @@ export default function SchedulePage() {
   };
 
   const handleSaveWeek = async () => {
-    if (!supabase || !week) {
+    if (!supabase) {
+      return;
+    }
+    const weekId = week?.id;
+    if (!weekId) {
+      setError('Brak identyfikatora tygodnia do zapisu.');
       return;
     }
     setError(null);
@@ -571,9 +576,9 @@ export default function SchedulePage() {
     });
 
     const { error: saveError } = await supabase.rpc('save_week_schedule', {
-      p_week_id: week.id,
-      p_assignments: assignmentsPayload,
-      p_absences: absencesPayload,
+      p_week_id: weekId,
+      p_assignments: assignmentsPayload ?? [],
+      p_absences: absencesPayload ?? [],
     });
 
     if (saveError) {
@@ -582,7 +587,7 @@ export default function SchedulePage() {
       return;
     }
 
-    await loadAssignments(week.id);
+    await loadAssignments(weekId);
     setSaveMessage('Zapisano');
     setSaving(false);
   };
