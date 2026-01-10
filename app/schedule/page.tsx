@@ -17,11 +17,17 @@ const DOCTORS = [
 
 const DAYS = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek"];
 const SLOTS = [
-  { id: "AM", label: "AM 08:00–12:00" },
-  { id: "PM", label: "PM 12:00–15:35" },
+  { id: "AM", label: "RANO (08:00–12:00)" },
+  { id: "PM", label: "POPOŁUDNIE (12:00–15:35)" },
 ];
 
 const ABSENCE_REASONS = ["VACATION", "TRAINING", "POST_CALL", "OTHER"] as const;
+const ABSENCE_REASON_LABELS: Record<AbsenceReason, string> = {
+  VACATION: "Urlop",
+  TRAINING: "Szkolenie",
+  POST_CALL: "Zejście po dyżurze",
+  OTHER: "Inne",
+};
 
 type AbsenceReason = (typeof ABSENCE_REASONS)[number];
 
@@ -106,10 +112,18 @@ export default function SchedulePage() {
     }));
   };
 
+  const clearSlot = (slotKey: SlotKey) => {
+    updateAssignment(slotKey, () => ({
+      admissions: null,
+      ward: [],
+      absence: {},
+    }));
+  };
+
   return (
     <main className="schedule-page">
       <h1>Grafik tygodniowy</h1>
-      <p>Wybierz obsadę dla każdego slotu. OFF jest wyliczany automatycznie.</p>
+      <p>Wybierz obsadę dla każdego bloku czasowego. Wolne jest wyliczane automatycznie.</p>
       <section className="schedule-grid">
         {assignments.map((item) => {
           const offList = DOCTORS.filter(
@@ -121,11 +135,20 @@ export default function SchedulePage() {
 
           return (
             <article key={item.key} className="schedule-card">
-              <h3>
-                {item.day} · {item.slot.label}
-              </h3>
+              <div className="schedule-card__header">
+                <h3>
+                  {item.day} · {item.slot.label}
+                </h3>
+                <button
+                  type="button"
+                  className="schedule-clear"
+                  onClick={() => clearSlot(item.key)}
+                >
+                  Wyczyść slot
+                </button>
+              </div>
               <div className="schedule-section">
-                <strong>ADMISSIONS (1 osoba)</strong>
+                <strong>Izba przyjęć (1 osoba)</strong>
                 <select
                   value={item.data.admissions ?? ""}
                   onChange={(event) => handleAdmissionsChange(item.key, event.target.value)}
@@ -139,7 +162,7 @@ export default function SchedulePage() {
                 </select>
               </div>
               <div className="schedule-section">
-                <strong>WARD</strong>
+                <strong>Oddział</strong>
                 <div className="schedule-list">
                   {DOCTORS.map((doctor) => {
                     const checked = item.data.ward.includes(doctor);
@@ -159,7 +182,7 @@ export default function SchedulePage() {
                 </div>
               </div>
               <div className="schedule-section">
-                <strong>ABSENCE</strong>
+                <strong>Nieobecności</strong>
                 <div className="schedule-list">
                   {DOCTORS.map((doctor) => {
                     const checked = !!item.data.absence[doctor];
@@ -186,7 +209,7 @@ export default function SchedulePage() {
                           >
                             {ABSENCE_REASONS.map((reason) => (
                               <option key={`${item.key}-reason-${doctor}-${reason}`} value={reason}>
-                                {reason}
+                                {ABSENCE_REASON_LABELS[reason]}
                               </option>
                             ))}
                           </select>
@@ -197,7 +220,7 @@ export default function SchedulePage() {
                 </div>
               </div>
               <div className="schedule-section">
-                <strong>OFF (implicit)</strong>
+                <strong>Wolne (automatycznie)</strong>
                 <div className="off-list">
                   {offList.map((doctor) => (
                     <span key={`${item.key}-off-${doctor}`} className="off-pill">
