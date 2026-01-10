@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const validationMessage = 'Wpisz email i hasło';
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -22,9 +23,15 @@ export default function LoginPage() {
       return;
     }
 
+    const trimmedEmail = email.trim();
+    if (trimmedEmail === '' || password === '') {
+      setError(validationMessage);
+      return;
+    }
+
     setLoading(true);
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+      email: trimmedEmail,
       password,
     });
     setLoading(false);
@@ -46,9 +53,15 @@ export default function LoginPage() {
       return;
     }
 
+    const trimmedEmail = email.trim();
+    if (trimmedEmail === '' || password === '') {
+      setError(validationMessage);
+      return;
+    }
+
     setLoading(true);
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
+      email: trimmedEmail,
       password,
     });
     setLoading(false);
@@ -64,7 +77,7 @@ export default function LoginPage() {
     }
 
     setStatus(
-      'Konto utworzone — sprawdź email i potwierdź, potem zaloguj się',
+      'Sprawdź email i potwierdź konto, potem zaloguj się',
     );
   };
 
