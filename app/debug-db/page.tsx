@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase as sharedClient } from '@/lib/supabaseClient';
@@ -35,6 +37,7 @@ const getUpcomingMonday = () => {
 };
 
 export default function DebugDbPage() {
+  const router = useRouter();
   const supabase = useMemo(() => sharedClient, []);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -42,27 +45,17 @@ export default function DebugDbPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadData = useCallback(async () => {
-    if (!supabase) {
-      setError('Brak konfiguracji Supabase (sprawdź env).');
-      setLoading(false);
-      return;
-    }
+  const loadProfile = useCallback(
+    async (currentUser: User | null) => {
+      if (!supabase) {
+        return;
+      }
 
-    setLoading(true);
-    setError(null);
+      if (!currentUser) {
+        setProfile(null);
+        return;
+      }
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      setError(userError.message);
-      setLoading(false);
-      return;
-    }
-
-    const currentUser = userData.user;
-    setUser(currentUser ?? null);
-
-    if (currentUser) {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role, can_approve')
@@ -72,9 +65,16 @@ export default function DebugDbPage() {
       if (profileError) {
         setError(profileError.message);
       }
+
       setProfile(profileData ?? null);
-    } else {
-      setProfile(null);
+    },
+    [supabase],
+  );
+
+  const loadWeeks = useCallback(async () => {
+    if (!supabase) {
+      setError('Brak konfiguracji Supabase (sprawdź env).');
+      return;
     }
 
     const { data: weeksData, error: weeksError } = await supabase
@@ -87,18 +87,64 @@ export default function DebugDbPage() {
     }
 
     setWeeks(weeksData ?? []);
-    setLoading(false);
   }, [supabase]);
+
+  const loadSession = useCallback(async () => {
+    if (!supabase) {
+      setError('Brak konfiguracji Supabase (sprawdź env).');
+      return;
+    }
+
+    const { data, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      setError(sessionError.message);
+      return;
+    }
+
+    const currentUser = data.session?.user ?? null;
+    setUser(currentUser);
+    await loadProfile(currentUser);
+  }, [loadProfile, supabase]);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    await loadSession();
+    await loadWeeks();
+    setLoading(false);
+  }, [loadSession, loadWeeks]);
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    if (!supabase) {
+      return;
+    }
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextUser = session?.user ?? null;
+      setUser(nextUser);
+      void loadProfile(nextUser);
+    });
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, [loadData, loadProfile, supabase]);
 
   const handleCreateWeek = async () => {
     if (!supabase) {
       return;
     }
     setError(null);
+
+    if (!user) {
+      setError('Brak zalogowanego użytkownika.');
+      return;
+    }
+    if (!canCreateWeek) {
+      setError('Brak uprawnień do tworzenia tygodni.');
+      return;
+    }
 
     const monday = getUpcomingMonday();
     const weekStart = formatDate(monday);
@@ -151,6 +197,21 @@ export default function DebugDbPage() {
     await loadData();
   };
 
+  const handleSignOut = async () => {
+    if (!supabase) {
+      return;
+    }
+    setError(null);
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      setError(signOutError.message);
+      return;
+    }
+    router.push('/login');
+  };
+
+  const canCreateWeek = profile?.role === 'planner' || profile?.role === 'head';
+
   if (!supabase) {
     return (
       <main style={{ padding: '2rem' }}>
@@ -165,15 +226,34 @@ export default function DebugDbPage() {
       <header>
         <h1>Debug DB</h1>
         <p>Zalogowany: {user ? 'tak' : 'nie'}</p>
-        {user && <p>User ID: {user.id}</p>}
-        <p>Rola: {profile?.role ?? 'brak'}</p>
+        {user ? (
+          <>
+            <p>User ID: {user.id}</p>
+            <p>Email: {user.email ?? 'brak'}</p>
+          </>
+        ) : (
+          <Link href="/login">Przejdź do logowania</Link>
+        )}
+        <p>Rola: {profile?.role ?? 'brak (profil nie istnieje)'}</p>
         <p>Can approve: {profile?.can_approve ? 'tak' : 'nie'}</p>
       </header>
 
       <section style={{ display: 'grid', gap: '0.75rem' }}>
-        <button type="button" onClick={handleCreateWeek}>
-          Utwórz tydzień
-        </button>
+        {user && (
+          <>
+            <button type="button" onClick={handleSignOut}>
+              Wyloguj
+            </button>
+            <button type="button" onClick={handleCreateWeek} disabled={!canCreateWeek}>
+              Utwórz tydzień
+            </button>
+            {!canCreateWeek && (
+              <p style={{ color: '#666' }}>
+                Brak uprawnień (wymagane planner/head).
+              </p>
+            )}
+          </>
+        )}
         {error && (
           <div style={{ color: 'crimson' }}>
             <strong>Błąd:</strong> {error}
