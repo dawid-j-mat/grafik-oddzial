@@ -92,25 +92,30 @@ export default function DebugDbPage() {
   const loadSession = useCallback(async () => {
     if (!supabase) {
       setError('Brak konfiguracji Supabase (sprawdź env).');
-      return;
+      return null;
     }
 
     const { data, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
       setError(sessionError.message);
-      return;
+      return null;
     }
 
     const currentUser = data.session?.user ?? null;
     setUser(currentUser);
     await loadProfile(currentUser);
+    return currentUser;
   }, [loadProfile, supabase]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    await loadSession();
-    await loadWeeks();
+    const currentUser = await loadSession();
+    if (currentUser) {
+      await loadWeeks();
+    } else {
+      setWeeks([]);
+    }
     setLoading(false);
   }, [loadSession, loadWeeks]);
 
