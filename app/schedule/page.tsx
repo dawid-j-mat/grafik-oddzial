@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase as sharedClient } from '@/lib/supabaseClient';
@@ -72,6 +73,14 @@ const parseDateString = (value: string) => {
   return new Date(year, month - 1, day);
 };
 
+const parseDateStringSafe = (value: string) => {
+  const parsed = parseDateString(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed;
+};
+
 const getMonday = (date: Date) => {
   const day = date.getDay();
   const diff = day === 0 ? -6 : 1 - day;
@@ -131,6 +140,8 @@ const normalizeAbsenceReason = (reason: string): AbsenceReason => {
 };
 
 export default function SchedulePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => sharedClient, []);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -405,6 +416,37 @@ export default function SchedulePage() {
     };
   }, [loadData, supabase, weekStart]);
 
+  const updateUrlWeekStart = useCallback(
+    (nextWeekStart: string) => {
+      const params = new URLSearchParams(searchParams?.toString());
+      params.set('week_start', nextWeekStart);
+      router.replace(`/schedule?${params.toString()}`);
+    },
+    [router, searchParams],
+  );
+
+  useEffect(() => {
+    const rawWeekStart = searchParams?.get('week_start');
+    const normalized = rawWeekStart
+      ? getWeekStartString(parseDateStringSafe(rawWeekStart) ?? new Date())
+      : getWeekStartString(new Date());
+
+    if (normalized !== weekStart) {
+      setWeekStart(normalized);
+    }
+
+    if (rawWeekStart !== normalized) {
+      updateUrlWeekStart(normalized);
+    }
+  }, [searchParams, updateUrlWeekStart, weekStart]);
+
+  useEffect(() => {
+    const rawWeekStart = searchParams?.get('week_start');
+    if (rawWeekStart !== weekStart) {
+      updateUrlWeekStart(weekStart);
+    }
+  }, [searchParams, updateUrlWeekStart, weekStart]);
+
   const handleWeekChange = (value: string) => {
     if (!value) {
       return;
@@ -437,18 +479,40 @@ export default function SchedulePage() {
       return;
     }
 
-    const { error: insertError } = await supabase
+    const { data: createdWeek, error: insertError } = await supabase
       .from('weeks')
-      .insert({ week_start: weekStart, status: 'draft' });
+      .insert({ week_start: weekStart, status: 'draft' })
+      .select('id, week_start, status')
+      .single();
 
     if (insertError) {
       if (insertError.code !== '23505') {
         setError(insertError.message);
         return;
       }
+
+      const { data: existingWeek, error: selectError } = await supabase
+        .from('weeks')
+        .select('id, week_start, status, approved_at, approved_by')
+        .eq('week_start', weekStart)
+        .maybeSingle();
+
+      if (selectError) {
+        setError(selectError.message);
+        return;
+      }
+
+      setWeek(existingWeek ?? null);
+      await loadAssignments(existingWeek?.id ?? null);
+      return;
     }
 
-    await loadData();
+    setWeek({
+      ...createdWeek,
+      approved_at: null,
+      approved_by: null,
+    });
+    await loadAssignments(createdWeek?.id ?? null);
   };
 
   const handleRevertWeek = async () => {
@@ -510,6 +574,15 @@ export default function SchedulePage() {
       </header>
 
       <section style={{ display: 'grid', gap: '0.75rem', marginTop: '1rem' }}>
+        <div style={{ display: 'grid', gap: '0.35rem' }}>
+          <strong>Debug:</strong>
+          <span>week_start: {weekStart}</span>
+          <span>weekId: {week?.id ?? 'brak'}</span>
+          <span>status: {week?.status ?? 'brak'}</span>
+          <span>
+            rola: {profile?.role ?? 'brak'} · can_approve: {profile?.can_approve ? 'tak' : 'nie'}
+          </span>
+        </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
           <button type="button" onClick={handlePrevWeek}>
             Poprzedni tydzień
@@ -522,16 +595,8 @@ export default function SchedulePage() {
             <input type="date" value={weekStart} onChange={(event) => handleWeekChange(event.target.value)} />
           </label>
         </div>
-        <p>
-          Tydzień Pon–Pt ({formatRangeLabel(weekStart)}) · week_start: {weekStart}
-        </p>
+        <p>Tydzień Pon–Pt ({formatRangeLabel(weekStart)})</p>
         <p style={{ color: '#475569' }}>Tryb podglądu / bez zapisu.</p>
-        {profile && (
-          <p>
-            Debug profilu: rola {profile.role ?? 'brak'} · can_approve{' '}
-            {profile.can_approve ? 'tak' : 'nie'}
-          </p>
-        )}
         {loading && <p>Ładowanie tygodnia...</p>}
         {error && (
           <div style={{ color: 'crimson' }}>
