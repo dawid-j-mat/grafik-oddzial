@@ -160,6 +160,9 @@ export default function SchedulePage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const canCreateWeek = profile?.role === 'planner' || profile?.role === 'head';
   const isReadOnly = week?.status === 'approved';
@@ -174,6 +177,8 @@ export default function SchedulePage() {
       if (isReadOnly || !week) {
         return;
       }
+      setDirty(true);
+      setSaveMessage(null);
       setSlotAssignments((prev) => ({
         ...prev,
         [slotKey]: updater(prev[slotKey] ?? createEmptySlot()),
@@ -301,6 +306,8 @@ export default function SchedulePage() {
     async (weekId: string | null) => {
       if (!supabase || !weekId) {
         setSlotAssignments(buildEmptyAssignments(weekStart));
+        setDirty(false);
+        setSaveMessage(null);
         return;
       }
 
@@ -355,6 +362,8 @@ export default function SchedulePage() {
       });
 
       setSlotAssignments(emptyAssignments);
+      setDirty(false);
+      setSaveMessage(null);
     },
     [supabase, weekStart],
   );
@@ -520,6 +529,64 @@ export default function SchedulePage() {
     await loadAssignments(createdWeek?.id ?? null);
   };
 
+  const handleSaveWeek = async () => {
+    if (!supabase || !week) {
+      return;
+    }
+    setError(null);
+    setSaveMessage(null);
+    setSaving(true);
+
+    const assignmentsPayload: AssignmentRow[] = [];
+    const absencesPayload: Array<AbsenceRow & { note: null }> = [];
+
+    Object.entries(slotAssignments).forEach(([slotKey, data]) => {
+      const date = slotKey.slice(0, 10);
+      const slot = slotKey.slice(11);
+      if (data.admissionsDoctorId) {
+        assignmentsPayload.push({
+          date,
+          slot,
+          doctor_id: data.admissionsDoctorId,
+          status: 'ADMISSIONS',
+        });
+      }
+      data.wardDoctorIds.forEach((doctorId) => {
+        assignmentsPayload.push({
+          date,
+          slot,
+          doctor_id: doctorId,
+          status: 'WARD',
+        });
+      });
+      Object.entries(data.absencesByDoctorId).forEach(([doctorId, reason]) => {
+        absencesPayload.push({
+          date,
+          slot,
+          doctor_id: doctorId,
+          reason,
+          note: null,
+        });
+      });
+    });
+
+    const { error: saveError } = await supabase.rpc('save_week_schedule', {
+      p_week_id: week.id,
+      p_assignments: assignmentsPayload,
+      p_absences: absencesPayload,
+    });
+
+    if (saveError) {
+      setError(saveError.message);
+      setSaving(false);
+      return;
+    }
+
+    await loadAssignments(week.id);
+    setSaveMessage('Zapisano');
+    setSaving(false);
+  };
+
   const handleRevertWeek = async () => {
     if (!supabase || !week) {
       return;
@@ -601,13 +668,16 @@ export default function SchedulePage() {
           </label>
         </div>
         <p>Tydzień Pon–Pt ({formatRangeLabel(weekStart)})</p>
-        <p style={{ color: '#475569' }}>Tryb podglądu / bez zapisu.</p>
+        {isReadOnly && <p style={{ color: '#475569' }}>Tydzień zatwierdzony — tylko podgląd.</p>}
+        {!isReadOnly && <p style={{ color: '#475569' }}>Wprowadź zmiany i kliknij „Zapisz zmiany”.</p>}
         {loading && <p>Ładowanie tygodnia...</p>}
         {error && (
           <div style={{ color: 'crimson' }}>
             <strong>Błąd:</strong> {error}
           </div>
         )}
+        {dirty && <p style={{ color: '#b45309' }}>Niezapisane zmiany</p>}
+        {saveMessage && <p style={{ color: '#15803d' }}>{saveMessage}</p>}
       </section>
 
       {!loading && !week && (
@@ -635,6 +705,11 @@ export default function SchedulePage() {
           {week.status === 'approved' && profile?.can_approve && (
             <button type="button" onClick={handleRevertWeek}>
               Cofnij do draft
+            </button>
+          )}
+          {user && canCreateWeek && week.status === 'draft' && (
+            <button type="button" onClick={handleSaveWeek} disabled={!dirty || saving}>
+              {saving ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </button>
           )}
         </section>
