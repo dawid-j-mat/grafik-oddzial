@@ -120,7 +120,7 @@ export default function DebugDbPage() {
   }, [loadSession, loadWeeks]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
     if (!supabase) {
       return;
     }
@@ -129,6 +129,7 @@ export default function DebugDbPage() {
       const nextUser = session?.user ?? null;
       setUser(nextUser);
       void loadProfile(nextUser);
+      void loadData();
     });
 
     return () => {
