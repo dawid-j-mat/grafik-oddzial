@@ -335,7 +335,7 @@ begin
 
   for v_offset in 0..4 loop
     v_day := v_week_start + v_offset;
-    foreach v_slot in array['AM', 'PM'] loop
+    FOREACH v_slot IN ARRAY ARRAY['AM','PM']::text[] LOOP
       select count(*)
         into v_count
       from public.assignments
