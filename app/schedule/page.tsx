@@ -61,27 +61,28 @@ type SlotAssignment = {
   absencesByDoctorId: Record<string, AbsenceReason>;
 };
 
-const formatDate = (date: Date) => {
+const formatDateLocal = (date: Date) => {
+  // Avoid toISOString to keep dates in local time (no timezone shifts).
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
-const parseDateString = (value: string) => {
+const parseDateLocal = (value: string) => {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day);
 };
 
-const parseDateStringSafe = (value: string) => {
-  const parsed = parseDateString(value);
+const parseDateLocalSafe = (value: string) => {
+  const parsed = parseDateLocal(value);
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
   return parsed;
 };
 
-const getMonday = (date: Date) => {
+const startOfWeekMonday = (date: Date) => {
   const day = date.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   const monday = new Date(date);
@@ -95,10 +96,10 @@ const addDays = (date: Date, days: number) => {
   return next;
 };
 
-const getWeekStartString = (date: Date) => formatDate(getMonday(date));
+const getWeekStartString = (date: Date) => formatDateLocal(startOfWeekMonday(date));
 
 const buildWeekDates = (weekStart: string) => {
-  const monday = getMonday(parseDateString(weekStart));
+  const monday = startOfWeekMonday(parseDateLocal(weekStart));
   return Array.from({ length: 5 }, (_value, index) => addDays(monday, index));
 };
 
@@ -124,7 +125,7 @@ const buildEmptyAssignments = (weekStart: string) => {
   const empty: Record<string, SlotAssignment> = {};
   const weekDates = buildWeekDates(weekStart);
   weekDates.forEach((date) => {
-    const dateString = formatDate(date);
+    const dateString = formatDateLocal(date);
     SLOTS.forEach((slot) => {
       empty[`${dateString}-${slot.id}`] = createEmptySlot();
     });
@@ -143,13 +144,19 @@ export default function SchedulePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => sharedClient, []);
+  const initialWeekStart = useMemo(() => {
+    const rawWeekStart = searchParams?.get('week_start');
+    const parsed = rawWeekStart ? parseDateLocalSafe(rawWeekStart) : null;
+    const baseDate = parsed ?? new Date();
+    return getWeekStartString(baseDate);
+  }, [searchParams]);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [weekStart, setWeekStart] = useState(() => getWeekStartString(new Date()));
+  const [weekStart, setWeekStart] = useState(() => initialWeekStart);
   const [week, setWeek] = useState<Week | null>(null);
   const [slotAssignments, setSlotAssignments] = useState<Record<string, SlotAssignment>>(() =>
-    buildEmptyAssignments(getWeekStartString(new Date())),
+    buildEmptyAssignments(initialWeekStart),
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -418,6 +425,7 @@ export default function SchedulePage() {
 
   const updateUrlWeekStart = useCallback(
     (nextWeekStart: string) => {
+      // Update the URL only in explicit user actions to avoid state<->URL loops.
       const params = new URLSearchParams(searchParams?.toString());
       params.set('week_start', nextWeekStart);
       router.replace(`/schedule?${params.toString()}`);
@@ -427,41 +435,38 @@ export default function SchedulePage() {
 
   useEffect(() => {
     const rawWeekStart = searchParams?.get('week_start');
-    const normalized = rawWeekStart
-      ? getWeekStartString(parseDateStringSafe(rawWeekStart) ?? new Date())
-      : getWeekStartString(new Date());
-
-    if (normalized !== weekStart) {
-      setWeekStart(normalized);
+    if (!rawWeekStart) {
+      return;
     }
-
-    if (rawWeekStart !== normalized) {
-      updateUrlWeekStart(normalized);
+    const parsed = parseDateLocalSafe(rawWeekStart);
+    if (!parsed) {
+      return;
     }
-  }, [searchParams, updateUrlWeekStart, weekStart]);
-
-  useEffect(() => {
-    const rawWeekStart = searchParams?.get('week_start');
-    if (rawWeekStart !== weekStart) {
-      updateUrlWeekStart(weekStart);
-    }
-  }, [searchParams, updateUrlWeekStart, weekStart]);
+    const normalized = getWeekStartString(parsed);
+    setWeekStart((prev) => (prev === normalized ? prev : normalized));
+  }, [searchParams]);
 
   const handleWeekChange = (value: string) => {
     if (!value) {
       return;
     }
-    setWeekStart(getWeekStartString(parseDateString(value)));
+    const normalized = getWeekStartString(parseDateLocal(value));
+    setWeekStart(normalized);
+    updateUrlWeekStart(normalized);
   };
 
   const handlePrevWeek = () => {
-    const monday = parseDateString(weekStart);
-    setWeekStart(formatDate(addDays(monday, -7)));
+    const monday = parseDateLocal(weekStart);
+    const nextWeekStart = formatDateLocal(addDays(monday, -7));
+    setWeekStart(nextWeekStart);
+    updateUrlWeekStart(nextWeekStart);
   };
 
   const handleNextWeek = () => {
-    const monday = parseDateString(weekStart);
-    setWeekStart(formatDate(addDays(monday, 7)));
+    const monday = parseDateLocal(weekStart);
+    const nextWeekStart = formatDateLocal(addDays(monday, 7));
+    setWeekStart(nextWeekStart);
+    updateUrlWeekStart(nextWeekStart);
   };
 
   const handleCreateWeek = async () => {
@@ -638,7 +643,7 @@ export default function SchedulePage() {
       <section className="schedule-grid">
         {weekDates.flatMap((date, dayIndex) =>
           SLOTS.map((slot) => {
-            const dateString = formatDate(date);
+            const dateString = formatDateLocal(date);
             const slotKey = `${dateString}-${slot.id}`;
             const data = slotAssignments[slotKey] ?? createEmptySlot();
             const activeDoctorIds = doctors.map((doctor) => doctor.id);
