@@ -47,7 +47,7 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     });
@@ -58,8 +58,13 @@ export default function LoginPage() {
       return;
     }
 
+    if (signUpData.session) {
+      router.push('/debug-db');
+      return;
+    }
+
     setStatus(
-      'Konto utworzone. Jeśli projekt wymaga potwierdzenia email, sprawdź skrzynkę i potwierdź konto, potem zaloguj się.',
+      'Konto utworzone — sprawdź email i potwierdź, potem zaloguj się',
     );
   };
 
