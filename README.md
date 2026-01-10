@@ -18,11 +18,33 @@ npm run dev
 
 Aplikacja będzie dostępna pod adresem: `http://localhost:3000`.
 
-## Kolejne kroki (bez wdrożeń Supabase)
+## Supabase Cloud Setup
 
-1. Utwórz projekt w Supabase (panel webowy).
-2. Skopiuj URL projektu oraz klucz anon do pliku `.env.local` na podstawie `.env.example`.
-3. Dodaj klienta Supabase w aplikacji (np. w module `lib/supabaseClient.ts`).
-4. Przygotuj schemat tabel oraz RLS zgodnie z zasadami z pliku `AGENTS.md`.
+### Dane dostępowe
 
-> Na tym etapie nie wdrażamy niczego do Supabase ani Dockera — to tylko przygotowana struktura projektu.
+1. Wejdź w panel Supabase → wybierz projekt.
+2. Przejdź do **Project Settings → API**.
+3. Skopiuj **Project URL** oraz **anon public** key do `.env.local` na podstawie `.env.example`:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### Wdrożenie migracji do Supabase Cloud
+
+```bash
+supabase login
+supabase link --project-ref <ref>
+supabase db push
+```
+
+### Uruchomienie aplikacji
+
+```bash
+npm install
+npm run dev
+```
+
+## Kolejne kroki
+
+1. Uzupełnij `.env.local` na podstawie `.env.example`.
+2. Wykonaj migracje do Supabase Cloud przez `supabase db push`.
+3. Przejdź do `/debug-db`, aby zweryfikować role i RPC.
