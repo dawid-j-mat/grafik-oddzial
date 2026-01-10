@@ -6,6 +6,9 @@ export default function HomePage() {
       <p>
         <a href="/schedule">Grafik</a>
       </p>
+      <p>
+        <a href="/doctors">Lekarze</a>
+      </p>
       <ul>
         <li>Uzupełnij integrację z Supabase w kolejnym kroku.</li>
         <li>Dodaj logikę harmonogramu i uprawnień.</li>
