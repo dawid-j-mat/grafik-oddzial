@@ -226,21 +226,36 @@ export default function DebugDbPage() {
     );
   }
 
+  if (!user && !loading) {
+    return (
+      <main style={{ padding: '2rem', display: 'grid', gap: '1.5rem' }}>
+        <header>
+          <h1>Debug DB</h1>
+          <p>Zalogowany: nie</p>
+          <Link href="/login">Przejdź do logowania</Link>
+        </header>
+        {error && (
+          <div style={{ color: 'crimson' }}>
+            <strong>Błąd:</strong> {error}
+          </div>
+        )}
+      </main>
+    );
+  }
+
   return (
     <main style={{ padding: '2rem', display: 'grid', gap: '1.5rem' }}>
       <header>
         <h1>Debug DB</h1>
         <p>Zalogowany: {user ? 'tak' : 'nie'}</p>
-        {user ? (
+        {user && (
           <>
             <p>User ID: {user.id}</p>
             <p>Email: {user.email ?? 'brak'}</p>
+            <p>Rola: {profile?.role ?? 'brak (profil nie istnieje)'}</p>
+            <p>Can approve: {profile?.can_approve ? 'tak' : 'nie'}</p>
           </>
-        ) : (
-          <Link href="/login">Przejdź do logowania</Link>
         )}
-        <p>Rola: {profile?.role ?? 'brak (profil nie istnieje)'}</p>
-        <p>Can approve: {profile?.can_approve ? 'tak' : 'nie'}</p>
       </header>
 
       <section style={{ display: 'grid', gap: '0.75rem' }}>
