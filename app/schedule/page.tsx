@@ -19,8 +19,14 @@ const ABSENCE_REASON_LABELS: Record<(typeof ABSENCE_REASONS)[number], string> = 
   POST_CALL: 'Zejście po dyżurze',
   OTHER: 'Inne',
 };
+const SLOT_LABELS = {
+  AM: 'RANO',
+  PM: 'POPOŁUDNIE',
+} as const;
 
 type AbsenceReason = (typeof ABSENCE_REASONS)[number];
+type SlotId = (typeof SLOTS)[number]['id'];
+type SlotLabel = (typeof SLOT_LABELS)[SlotId];
 
 type Profile = {
   role: string;
@@ -163,6 +169,11 @@ export default function SchedulePage() {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [approving, setApproving] = useState(false);
+  const [reverting, setReverting] = useState(false);
+  const [approvalWarning, setApprovalWarning] = useState<string | null>(null);
+  const [approvalSuccess, setApprovalSuccess] = useState<string | null>(null);
+  const [missingAdmissions, setMissingAdmissions] = useState<string[]>([]);
 
   const canCreateWeek = profile?.role === 'planner' || profile?.role === 'head';
   const isReadOnly = week?.status === 'approved';
@@ -179,6 +190,9 @@ export default function SchedulePage() {
       }
       setDirty(true);
       setSaveMessage(null);
+      setApprovalWarning(null);
+      setApprovalSuccess(null);
+      setMissingAdmissions([]);
       setSlotAssignments((prev) => ({
         ...prev,
         [slotKey]: updater(prev[slotKey] ?? createEmptySlot()),
@@ -308,6 +322,9 @@ export default function SchedulePage() {
         setSlotAssignments(buildEmptyAssignments(weekStart));
         setDirty(false);
         setSaveMessage(null);
+        setApprovalWarning(null);
+        setApprovalSuccess(null);
+        setMissingAdmissions([]);
         return;
       }
 
@@ -364,6 +381,9 @@ export default function SchedulePage() {
       setSlotAssignments(emptyAssignments);
       setDirty(false);
       setSaveMessage(null);
+      setApprovalWarning(null);
+      setApprovalSuccess(null);
+      setMissingAdmissions([]);
     },
     [supabase, weekStart],
   );
@@ -388,6 +408,9 @@ export default function SchedulePage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setApprovalWarning(null);
+    setApprovalSuccess(null);
+    setMissingAdmissions([]);
     const currentUser = await loadSession();
     if (!currentUser) {
       setProfile(null);
@@ -540,6 +563,8 @@ export default function SchedulePage() {
     }
     setError(null);
     setSaveMessage(null);
+    setApprovalWarning(null);
+    setApprovalSuccess(null);
     setSaving(true);
 
     const assignmentsPayload: AssignmentRow[] = [];
@@ -592,22 +617,108 @@ export default function SchedulePage() {
     setSaving(false);
   };
 
+  const refreshWeek = async (weekId: string) => {
+    if (!supabase) {
+      return null;
+    }
+
+    const { data: refreshedWeek, error: refreshError } = await supabase
+      .from('weeks')
+      .select('id, week_start, status, approved_at, approved_by')
+      .eq('id', weekId)
+      .maybeSingle();
+
+    if (refreshError) {
+      setError(refreshError.message);
+    }
+
+    setWeek(refreshedWeek ?? null);
+    return refreshedWeek ?? null;
+  };
+
+  const collectMissingAdmissions = useCallback(() => {
+    const missing: string[] = [];
+    weekDates.forEach((date, dayIndex) => {
+      const dateString = formatDateLocal(date);
+      SLOTS.forEach((slot) => {
+        const slotKey = `${dateString}-${slot.id}`;
+        const slotData = slotAssignments[slotKey];
+        if (!slotData?.admissionsDoctorId) {
+          const slotLabel = SLOT_LABELS[slot.id as SlotId] as SlotLabel;
+          missing.push(`${DAYS[dayIndex]} ${slotLabel}`);
+        }
+      });
+    });
+    return missing;
+  }, [slotAssignments, weekDates]);
+
+  const handleApproveWeek = async () => {
+    if (!supabase || !week) {
+      return;
+    }
+
+    if (week.status !== 'draft') {
+      return;
+    }
+
+    setError(null);
+    setApprovalWarning(null);
+    setApprovalSuccess(null);
+
+    const missing = collectMissingAdmissions();
+    setMissingAdmissions(missing);
+
+    if (dirty) {
+      setApprovalWarning('Masz niezapisane zmiany — najpierw zapisz.');
+      return;
+    }
+
+    if (missing.length > 0) {
+      setApprovalWarning('Uzupełnij obsadę izby przyjęć przed zatwierdzeniem.');
+      return;
+    }
+
+    setApproving(true);
+    const { error: approveError } = await supabase.rpc('approve_week', {
+      p_week_id: week.id,
+    });
+
+    if (approveError) {
+      setError(approveError.message);
+      setApproving(false);
+      return;
+    }
+
+    await refreshWeek(week.id);
+    await loadAssignments(week.id);
+    setDirty(false);
+    setApprovalSuccess('Tydzień zatwierdzony.');
+    setApproving(false);
+  };
+
   const handleRevertWeek = async () => {
     if (!supabase || !week) {
       return;
     }
 
     setError(null);
+    setApprovalWarning(null);
+    setApprovalSuccess(null);
+    setReverting(true);
     const { error: revertError } = await supabase.rpc('revert_week', {
       p_week_id: week.id,
     });
 
     if (revertError) {
       setError(revertError.message);
+      setReverting(false);
       return;
     }
 
-    await loadData();
+    await refreshWeek(week.id);
+    await loadAssignments(week.id);
+    setApprovalSuccess('Cofnięto do draft.');
+    setReverting(false);
   };
 
   if (!supabase) {
@@ -688,6 +799,7 @@ export default function SchedulePage() {
       {!loading && !week && (
         <section style={{ marginTop: '1.5rem', display: 'grid', gap: '0.75rem' }}>
           <p>Brak grafiku dla wybranego tygodnia.</p>
+          <p style={{ color: '#64748b' }}>Najpierw utwórz tydzień.</p>
           {canCreateWeek && (
             <button type="button" onClick={handleCreateWeek}>
               Utwórz tydzień (draft)
@@ -708,9 +820,32 @@ export default function SchedulePage() {
           </div>
           {week.status === 'approved' && <p>Tydzień zatwierdzony.</p>}
           {week.status === 'approved' && profile?.can_approve && (
-            <button type="button" onClick={handleRevertWeek}>
-              Cofnij do draft
+            <button type="button" onClick={handleRevertWeek} disabled={reverting}>
+              {reverting ? 'Cofanie...' : 'Cofnij do draft'}
             </button>
+          )}
+          {week.status === 'draft' && profile?.can_approve && (
+            <button type="button" onClick={handleApproveWeek} disabled={approving || dirty}>
+              {approving ? 'Zatwierdzanie...' : 'Zatwierdź tydzień'}
+            </button>
+          )}
+          {profile && !profile.can_approve && (
+            <p style={{ color: '#64748b' }}>Brak uprawnień do zatwierdzania.</p>
+          )}
+          {dirty && week.status === 'draft' && profile?.can_approve && (
+            <p style={{ color: '#b45309' }}>Masz niezapisane zmiany — najpierw zapisz.</p>
+          )}
+          {approvalWarning && <p style={{ color: '#b45309' }}>{approvalWarning}</p>}
+          {approvalSuccess && <p style={{ color: '#15803d' }}>{approvalSuccess}</p>}
+          {missingAdmissions.length > 0 && (
+            <div style={{ color: '#b45309' }}>
+              <strong>Braki w obsadzie izby przyjęć:</strong>
+              <ul>
+                {missingAdmissions.map((label) => (
+                  <li key={`missing-${label}`}>{label}</li>
+                ))}
+              </ul>
+            </div>
           )}
           {user && canCreateWeek && week.status === 'draft' && (
             <button type="button" onClick={handleSaveWeek} disabled={!dirty || saving}>
