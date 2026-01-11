@@ -24,6 +24,280 @@ main {
   max-width: 1200px;
 }
 
+.month-page {
+  max-width: 1320px;
+}
+
+.month-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.month-subtitle {
+  color: #64748b;
+  margin-top: 0.4rem;
+}
+
+.month-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.month-nav-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-align: center;
+}
+
+.month-nav-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.month-nav-range {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.month-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.month-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.month-link:hover {
+  text-decoration: underline;
+}
+
+.month-button {
+  background: #ffffff;
+  border: 1px solid #cbd5f5;
+  border-radius: 999px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #0f172a;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.month-button:hover {
+  border-color: #94a3b8;
+}
+
+.month-button--primary {
+  background: #1f2937;
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.month-button--primary:hover {
+  background: #0f172a;
+}
+
+.month-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.month-login-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: #1f2937;
+  color: #ffffff;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.month-error {
+  color: #b91c1c;
+  background: #fee2e2;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+}
+
+.month-missing {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.month-missing h2 {
+  margin-top: 0;
+}
+
+.month-missing-block {
+  margin-top: 1rem;
+}
+
+.month-missing-week {
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.9rem;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.month-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.month-week {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.month-week-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.month-week-link {
+  font-weight: 600;
+  text-decoration: none;
+  color: #0f172a;
+}
+
+.month-week-link:hover {
+  text-decoration: underline;
+}
+
+.month-week-badge {
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.month-week-badge--approved {
+  background: #e2f0ff;
+  color: #1d4ed8;
+}
+
+.month-week-badge--draft {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.month-week-badge--missing {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.month-week-days {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.month-day {
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.9rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.month-day:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+.month-day--outside {
+  opacity: 0.6;
+}
+
+.month-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.month-day-name {
+  font-size: 0.9rem;
+}
+
+.month-day-date {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.month-day-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.month-slot {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.month-slot-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.month-slot-line {
+  display: flex;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #1f2937;
+}
+
+.month-slot-line strong {
+  font-weight: 600;
+}
+
+.month-absence-list {
+  margin: 0.2rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
 .schedule-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
