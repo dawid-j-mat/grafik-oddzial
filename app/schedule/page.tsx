@@ -12,11 +12,12 @@ const SLOTS = [
   { id: 'PM', label: 'POPOŁUDNIE (12:00–15:35)' },
 ] as const;
 
-const ABSENCE_REASONS = ['VACATION', 'TRAINING', 'POST_CALL', 'OTHER'] as const;
+const ABSENCE_REASONS = ['VACATION', 'TRAINING', 'POST_CALL', 'INTERNSHIP', 'OTHER'] as const;
 const ABSENCE_REASON_LABELS: Record<(typeof ABSENCE_REASONS)[number], string> = {
   VACATION: 'Urlop',
   TRAINING: 'Szkolenie',
   POST_CALL: 'Zejście po dyżurze',
+  INTERNSHIP: 'Staż',
   OTHER: 'Inne',
 };
 const SLOT_LABELS = {
