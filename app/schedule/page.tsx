@@ -173,6 +173,45 @@ const areSameAbsenceMaps = (
   return leftEntries.every(([doctorId, reason]) => right[doctorId] === reason);
 };
 
+const collectAbsentDoctorIds = (data: DayAssignment, useSlotDetails: boolean) => {
+  const ids = new Set<string>();
+  if (useSlotDetails) {
+    Object.keys(data.absencesByDoctorIdBySlot.AM).forEach((doctorId) => ids.add(doctorId));
+    Object.keys(data.absencesByDoctorIdBySlot.PM).forEach((doctorId) => ids.add(doctorId));
+  } else {
+    Object.keys(data.dayAbsencesByDoctorId).forEach((doctorId) => ids.add(doctorId));
+  }
+  return ids;
+};
+
+const isDoctorAbsentAnySlot = (data: DayAssignment, useSlotDetails: boolean, doctorId: string) => {
+  if (useSlotDetails) {
+    return !!data.absencesByDoctorIdBySlot.AM[doctorId] || !!data.absencesByDoctorIdBySlot.PM[doctorId];
+  }
+  return !!data.dayAbsencesByDoctorId[doctorId];
+};
+
+const buildWardForSlot = (
+  data: DayAssignment,
+  useSlotDetails: boolean,
+  slot: SlotId,
+  absences: Set<string>,
+) => {
+  const baseWard = useSlotDetails ? data.wardDoctorIdsBySlot[slot] : data.dayWardDoctorIds;
+  const oppositeSlot = slot === 'AM' ? 'PM' : 'AM';
+  const impliedAdmission = data.admissionsDoctorIds[oppositeSlot];
+  const excludedAdmission = data.admissionsDoctorIds[slot];
+  const wardSet = new Set<string>(baseWard);
+  if (impliedAdmission) {
+    wardSet.add(impliedAdmission);
+  }
+  if (excludedAdmission) {
+    wardSet.delete(excludedAdmission);
+  }
+  absences.forEach((doctorId) => wardSet.delete(doctorId));
+  return Array.from(wardSet);
+};
+
 export default function SchedulePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -231,9 +270,8 @@ export default function SchedulePage() {
 
   const handleAdmissionsChange = (dateKey: string, slot: SlotId, doctorId: string) => {
     updateDayAssignment(dateKey, (data) => {
-      const isAbsent = data.isDetailed || data.hasSlotDifferences
-        ? !!data.absencesByDoctorIdBySlot[slot][doctorId]
-        : !!data.dayAbsencesByDoctorId[doctorId];
+      const useSlotDetails = data.isDetailed || data.hasSlotDifferences;
+      const isAbsent = doctorId ? isDoctorAbsentAnySlot(data, useSlotDetails, doctorId) : false;
       if (doctorId && isAbsent) {
         return data;
       }
@@ -285,7 +323,8 @@ export default function SchedulePage() {
 
   const toggleDayWard = (dateKey: string, doctorId: string) => {
     updateDayAssignment(dateKey, (data) => {
-      if (data.dayAbsencesByDoctorId[doctorId]) {
+      const useSlotDetails = data.isDetailed || data.hasSlotDifferences;
+      if (isDoctorAbsentAnySlot(data, useSlotDetails, doctorId)) {
         return data;
       }
       if (!confirmDayUnify(data)) {
@@ -346,7 +385,7 @@ export default function SchedulePage() {
 
   const toggleWardBySlot = (dateKey: string, slot: SlotId, doctorId: string) => {
     updateDayAssignment(dateKey, (data) => {
-      if (data.absencesByDoctorIdBySlot[slot][doctorId]) {
+      if (isDoctorAbsentAnySlot(data, true, doctorId)) {
         return data;
       }
       const wardList = data.wardDoctorIdsBySlot[slot];
@@ -367,16 +406,23 @@ export default function SchedulePage() {
       } else {
         nextAbsence[doctorId] = 'VACATION';
       }
-      const nextWard = data.wardDoctorIdsBySlot[slot].filter((id) => !nextAbsence[id]);
-      const nextAdmissions = { ...data.admissionsDoctorIds };
-      const admissionsDoctorId = nextAdmissions[slot];
-      if (admissionsDoctorId && nextAbsence[admissionsDoctorId]) {
-        nextAdmissions[slot] = null;
-      }
+      const isNowAbsent = !!nextAbsence[doctorId];
+      const nextWard = isNowAbsent
+        ? {
+            AM: data.wardDoctorIdsBySlot.AM.filter((id) => id !== doctorId),
+            PM: data.wardDoctorIdsBySlot.PM.filter((id) => id !== doctorId),
+          }
+        : data.wardDoctorIdsBySlot;
+      const nextAdmissions = isNowAbsent
+        ? {
+            AM: doctorId === data.admissionsDoctorIds.AM ? null : data.admissionsDoctorIds.AM,
+            PM: doctorId === data.admissionsDoctorIds.PM ? null : data.admissionsDoctorIds.PM,
+          }
+        : data.admissionsDoctorIds;
       return updateDetailedDifferences({
         ...data,
         admissionsDoctorIds: nextAdmissions,
-        wardDoctorIdsBySlot: { ...data.wardDoctorIdsBySlot, [slot]: nextWard },
+        wardDoctorIdsBySlot: nextWard,
         absencesByDoctorIdBySlot: { ...data.absencesByDoctorIdBySlot, [slot]: nextAbsence },
       });
     });
@@ -540,11 +586,17 @@ export default function SchedulePage() {
         }
         const slot = row.slot as SlotId;
         dayData.absencesByDoctorIdBySlot[slot][row.doctor_id] = normalizeAbsenceReason(row.reason);
-        dayData.wardDoctorIdsBySlot[slot] = dayData.wardDoctorIdsBySlot[slot].filter(
+        dayData.wardDoctorIdsBySlot.AM = dayData.wardDoctorIdsBySlot.AM.filter(
           (id) => id !== row.doctor_id,
         );
-        if (dayData.admissionsDoctorIds[slot] === row.doctor_id) {
-          dayData.admissionsDoctorIds[slot] = null;
+        dayData.wardDoctorIdsBySlot.PM = dayData.wardDoctorIdsBySlot.PM.filter(
+          (id) => id !== row.doctor_id,
+        );
+        if (dayData.admissionsDoctorIds.AM === row.doctor_id) {
+          dayData.admissionsDoctorIds.AM = null;
+        }
+        if (dayData.admissionsDoctorIds.PM === row.doctor_id) {
+          dayData.admissionsDoctorIds.PM = null;
         }
       });
 
@@ -757,10 +809,16 @@ export default function SchedulePage() {
     const absencesPayload: Array<AbsenceRow & { note: null }> = [];
 
     Object.entries(dayAssignments).forEach(([date, data]) => {
+      const useSlotDetails = data.isDetailed || data.hasSlotDifferences;
+      const absenceIds = collectAbsentDoctorIds(data, useSlotDetails);
+      const wardIdsBySlot = {
+        AM: buildWardForSlot(data, useSlotDetails, 'AM', absenceIds),
+        PM: buildWardForSlot(data, useSlotDetails, 'PM', absenceIds),
+      };
       SLOTS.forEach((slot) => {
         const slotId = slot.id as SlotId;
         const admissionsDoctorId = data.admissionsDoctorIds[slotId];
-        if (admissionsDoctorId) {
+        if (admissionsDoctorId && !absenceIds.has(admissionsDoctorId)) {
           assignmentsPayload.push({
             date,
             slot: slotId,
@@ -768,13 +826,12 @@ export default function SchedulePage() {
             status: 'ADMISSIONS',
           });
         }
-        const useSlotDetails = data.isDetailed || data.hasSlotDifferences;
         const absencesForSlot = useSlotDetails
           ? data.absencesByDoctorIdBySlot[slotId]
           : data.dayAbsencesByDoctorId;
-        const wardForSlot = useSlotDetails ? data.wardDoctorIdsBySlot[slotId] : data.dayWardDoctorIds;
+        const wardForSlot = wardIdsBySlot[slotId];
         wardForSlot
-          .filter((doctorId) => doctorId !== admissionsDoctorId && !absencesForSlot[doctorId])
+          .filter((doctorId) => doctorId !== admissionsDoctorId && !absenceIds.has(doctorId))
           .forEach((doctorId) => {
             assignmentsPayload.push({
               date,
@@ -1105,18 +1162,12 @@ export default function SchedulePage() {
           const activeDoctorIds = doctors.map((doctor) => doctor.id);
           const admissionsIds = Object.values(data.admissionsDoctorIds).filter(Boolean) as string[];
           const useSlotDetails = data.isDetailed || data.hasSlotDifferences;
-          const wardIds = useSlotDetails
-            ? [...data.wardDoctorIdsBySlot.AM, ...data.wardDoctorIdsBySlot.PM]
-            : data.dayWardDoctorIds;
-          const absenceIds = useSlotDetails
-            ? [
-                ...Object.keys(data.absencesByDoctorIdBySlot.AM),
-                ...Object.keys(data.absencesByDoctorIdBySlot.PM),
-              ]
-            : Object.keys(data.dayAbsencesByDoctorId);
-          const usedIds = new Set([...admissionsIds, ...wardIds, ...absenceIds]);
+          const absenceIds = collectAbsentDoctorIds(data, useSlotDetails);
+          const wardIdsAM = buildWardForSlot(data, useSlotDetails, 'AM', absenceIds);
+          const wardIdsPM = buildWardForSlot(data, useSlotDetails, 'PM', absenceIds);
+          const usedIds = new Set([...admissionsIds, ...wardIdsAM, ...wardIdsPM, ...absenceIds]);
           const offDoctorIds = activeDoctorIds.filter((doctorId) => !usedIds.has(doctorId));
-          const showDetailedToggle = data.hasSlotDifferences || data.isDetailed;
+          const showDetailedToggle = data.hasSlotDifferences || data.isDetailed || admissionsIds.length > 0;
 
           return (
             <article key={dateString} className="schedule-card">
@@ -1157,9 +1208,7 @@ export default function SchedulePage() {
                 >
                   <option value="">— wybierz —</option>
                   {doctors.map((doctor) => {
-                    const isAbsent = useSlotDetails
-                      ? !!data.absencesByDoctorIdBySlot.AM[doctor.id]
-                      : !!data.dayAbsencesByDoctorId[doctor.id];
+                    const isAbsent = isDoctorAbsentAnySlot(data, useSlotDetails, doctor.id);
                     return (
                       <option key={`${dateString}-adm-am-${doctor.id}`} value={doctor.id} disabled={isAbsent}>
                         {doctor.full_name}
@@ -1177,9 +1226,7 @@ export default function SchedulePage() {
                 >
                   <option value="">— wybierz —</option>
                   {doctors.map((doctor) => {
-                    const isAbsent = useSlotDetails
-                      ? !!data.absencesByDoctorIdBySlot.PM[doctor.id]
-                      : !!data.dayAbsencesByDoctorId[doctor.id];
+                    const isAbsent = isDoctorAbsentAnySlot(data, useSlotDetails, doctor.id);
                     return (
                       <option key={`${dateString}-adm-pm-${doctor.id}`} value={doctor.id} disabled={isAbsent}>
                         {doctor.full_name}
@@ -1198,7 +1245,8 @@ export default function SchedulePage() {
                   <div className="schedule-list">
                     {doctors.map((doctor) => {
                       const checked = data.dayWardDoctorIds.includes(doctor.id);
-                      const disabled = isReadOnly || !week || !!data.dayAbsencesByDoctorId[doctor.id];
+                      const disabled =
+                        isReadOnly || !week || isDoctorAbsentAnySlot(data, useSlotDetails, doctor.id);
                       return (
                         <label key={`${dateString}-ward-day-${doctor.id}`}>
                           <input
@@ -1223,8 +1271,9 @@ export default function SchedulePage() {
                   <strong>Oddział RANO</strong>
                   <div className="schedule-list">
                     {doctors.map((doctor) => {
-                      const checked = data.wardDoctorIdsBySlot.AM.includes(doctor.id);
-                      const disabled = isReadOnly || !week || !!data.absencesByDoctorIdBySlot.AM[doctor.id];
+                      const checked = wardIdsAM.includes(doctor.id);
+                      const disabled =
+                        isReadOnly || !week || isDoctorAbsentAnySlot(data, useSlotDetails, doctor.id);
                       return (
                         <label key={`${dateString}-ward-am-${doctor.id}`}>
                           <input
@@ -1241,8 +1290,9 @@ export default function SchedulePage() {
                   <strong>Oddział POPOŁUDNIE</strong>
                   <div className="schedule-list">
                     {doctors.map((doctor) => {
-                      const checked = data.wardDoctorIdsBySlot.PM.includes(doctor.id);
-                      const disabled = isReadOnly || !week || !!data.absencesByDoctorIdBySlot.PM[doctor.id];
+                      const checked = wardIdsPM.includes(doctor.id);
+                      const disabled =
+                        isReadOnly || !week || isDoctorAbsentAnySlot(data, useSlotDetails, doctor.id);
                       return (
                         <label key={`${dateString}-ward-pm-${doctor.id}`}>
                           <input
