@@ -198,6 +198,7 @@ export default function SchedulePage() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
   const [reverting, setReverting] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [approvalWarning, setApprovalWarning] = useState<string | null>(null);
   const [approvalSuccess, setApprovalSuccess] = useState<string | null>(null);
   const [missingAdmissions, setMissingAdmissions] = useState<string[]>([]);
@@ -914,6 +915,50 @@ export default function SchedulePage() {
     setReverting(false);
   };
 
+  const handleCopyWeek = async () => {
+    if (!supabase || !week) {
+      return;
+    }
+
+    if (!canCreateWeek) {
+      setError('Brak uprawnień do kopiowania.');
+      return;
+    }
+
+    if (week.status !== 'draft') {
+      setError('Tydzień zatwierdzony — brak kopiowania.');
+      return;
+    }
+
+    if (
+      !window.confirm(
+        'Skopiujesz oddział i nieobecności z poprzedniego tygodnia. Nadpiszesz dane dla bieżącego tygodnia.',
+      )
+    ) {
+      return;
+    }
+
+    setError(null);
+    setSaveMessage(null);
+    setApprovalWarning(null);
+    setApprovalSuccess(null);
+    setCopying(true);
+
+    const { error: copyError } = await supabase.rpc('copy_week_ward_absences', {
+      p_target_week_id: week.id,
+    });
+
+    if (copyError) {
+      setError(copyError.message);
+      setCopying(false);
+      return;
+    }
+
+    await loadAssignments(week.id);
+    setSaveMessage('Skopiowano');
+    setCopying(false);
+  };
+
   if (!supabase) {
     return (
       <main style={{ padding: '2rem' }}>
@@ -1043,6 +1088,11 @@ export default function SchedulePage() {
           {user && canCreateWeek && week.status === 'draft' && (
             <button type="button" onClick={handleSaveWeek} disabled={!dirty || saving}>
               {saving ? 'Zapisywanie...' : 'Zapisz zmiany'}
+            </button>
+          )}
+          {user && canCreateWeek && week.status === 'draft' && (
+            <button type="button" onClick={handleCopyWeek} disabled={copying}>
+              {copying ? 'Kopiowanie...' : 'Skopiuj oddział i nieobecności z poprzedniego tygodnia'}
             </button>
           )}
         </section>
