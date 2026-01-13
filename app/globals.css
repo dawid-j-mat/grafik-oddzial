@@ -732,6 +732,10 @@ ul {
   color: #64748b;
 }
 
+.print-only {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .view-page {
     padding: 0 0.4rem;
@@ -756,36 +760,78 @@ ul {
 }
 
 @media print {
+  @page {
+    margin: 12mm;
+  }
+
   body {
-    padding: 0.8rem;
+    padding: 0;
     background: #ffffff;
+    color: #000000;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   main {
     box-shadow: none;
-    padding: 0.8rem;
+    padding: 0;
   }
 
   .no-print {
     display: none !important;
   }
 
+  .print-only {
+    display: block !important;
+  }
+
+  .view-page {
+    max-width: none;
+    color: #000000;
+  }
+
+  .view-subtitle,
+  .view-week-range,
+  .view-day-date,
+  .view-nav-range,
+  .view-section-title,
+  .view-slot-label {
+    color: #000000;
+  }
+
+  .view-week,
+  .view-week-block,
+  .view-day-card {
+    background: #ffffff;
+    box-shadow: none;
+    border-color: #000000;
+  }
+
+  .view-status-badge,
+  .view-status-badge--approved,
+  .view-status-badge--draft,
+  .view-status-badge--missing {
+    background: #ffffff;
+    color: #000000;
+    border-color: #000000;
+  }
+
   .view-week,
   .view-week-block {
     break-inside: avoid;
     page-break-inside: avoid;
-    box-shadow: none;
   }
 
   .view-day-card {
-    padding: 0.5rem;
+    padding: 0.55rem;
     gap: 0.4rem;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   .view-page--month {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
   }
 
   .view-page--month .view-admissions-name {
@@ -794,5 +840,10 @@ ul {
 
   .view-week-days {
     gap: 0.5rem;
+  }
+
+  .view-page--month .view-week-block + .view-week-block {
+    break-before: page;
+    page-break-before: always;
   }
 }

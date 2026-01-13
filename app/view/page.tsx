@@ -666,16 +666,20 @@ export default function ViewPage() {
           </p>
         </div>
         <div className="view-actions no-print">
-          <button type="button" className="view-button" onClick={() => window.print()}>
+          <button
+            type="button"
+            className="view-button no-print"
+            onClick={() => window.print()}
+          >
             Drukuj
           </button>
           {canEdit && viewMode === 'week' && (
-            <Link href={`/schedule?week_start=${weekStart}`} className="view-link">
+            <Link href={`/schedule?week_start=${weekStart}`} className="view-link no-print">
               Edytuj tydzień
             </Link>
           )}
           {canEdit && viewMode === 'month' && (
-            <Link href={`/month?month=${monthParam}`} className="view-link">
+            <Link href={`/month?month=${monthParam}`} className="view-link no-print">
               Edytuj miesiąc
             </Link>
           )}
@@ -683,47 +687,63 @@ export default function ViewPage() {
       </header>
 
       <section className="view-controls no-print">
-        <div className="view-toggle">
+        <div className="view-toggle no-print">
           <button
             type="button"
-            className={`view-toggle-button ${viewMode === 'week' ? 'is-active' : ''}`}
+            className={`view-toggle-button no-print ${viewMode === 'week' ? 'is-active' : ''}`}
             onClick={() => router.replace(`/view?week_start=${weekStart}`)}
           >
             Tydzień
           </button>
           <button
             type="button"
-            className={`view-toggle-button ${viewMode === 'month' ? 'is-active' : ''}`}
+            className={`view-toggle-button no-print ${viewMode === 'month' ? 'is-active' : ''}`}
             onClick={() => router.replace(`/view?month=${monthParam}`)}
           >
             Miesiąc
           </button>
         </div>
         {viewMode === 'week' ? (
-          <div className="view-nav">
-            <button type="button" className="view-button" onClick={() => handleChangeWeek(-1)}>
+          <div className="view-nav no-print">
+            <button
+              type="button"
+              className="view-button no-print"
+              onClick={() => handleChangeWeek(-1)}
+            >
               ← Poprzedni tydzień
             </button>
-            <div className="view-nav-label">
+            <div className="view-nav-label no-print">
               <span className="view-nav-title">Tydzień {weekStart}</span>
               <span className="view-nav-range">{formatRangeLabel(weekStart)}</span>
             </div>
-            <button type="button" className="view-button" onClick={() => handleChangeWeek(1)}>
+            <button
+              type="button"
+              className="view-button no-print"
+              onClick={() => handleChangeWeek(1)}
+            >
               Następny tydzień →
             </button>
           </div>
         ) : (
-          <div className="view-nav">
-            <button type="button" className="view-button" onClick={() => handleChangeMonth(-1)}>
+          <div className="view-nav no-print">
+            <button
+              type="button"
+              className="view-button no-print"
+              onClick={() => handleChangeMonth(-1)}
+            >
               ← Poprzedni miesiąc
             </button>
-            <div className="view-nav-label">
+            <div className="view-nav-label no-print">
               <span className="view-nav-title">{monthLabel}</span>
               <span className="view-nav-range">
                 Zakres: {formatDateLocal(rangeStart)} – {formatDateLocal(rangeEnd)}
               </span>
             </div>
-            <button type="button" className="view-button" onClick={() => handleChangeMonth(1)}>
+            <button
+              type="button"
+              className="view-button no-print"
+              onClick={() => handleChangeMonth(1)}
+            >
               Następny miesiąc →
             </button>
           </div>
