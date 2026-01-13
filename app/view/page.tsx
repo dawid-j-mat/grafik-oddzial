@@ -585,7 +585,7 @@ export default function ViewPage() {
             </p>
           ) : (
             <div className="view-variant">
-              <span className="view-diff-badge">różni się AM/PM</span>
+              <span className="view-diff-badge">AM/PM różni się</span>
               <p className="view-list-text">
                 <strong>RANO:</strong> {wardNamesAM.length > 0 ? wardNamesAM.join(', ') : '—'}
               </p>
@@ -610,7 +610,7 @@ export default function ViewPage() {
             )
           ) : (
             <div className="view-variant">
-              <span className="view-diff-badge">różni się AM/PM</span>
+              <span className="view-diff-badge">AM/PM różni się</span>
               <div>
                 <p className="view-list-text">
                   <strong>RANO:</strong>
@@ -652,14 +652,18 @@ export default function ViewPage() {
 
   const weekStatus = weekData?.week?.status ?? 'missing';
   const weekStatusLabel =
-    weekStatus === 'approved' ? 'zatwierdzony' : weekStatus === 'draft' ? 'roboczy' : 'brak tygodnia';
+    weekStatus === 'approved' ? 'Zatwierdzony' : weekStatus === 'draft' ? 'Draft' : 'Brak tygodnia';
 
   return (
     <main className={`view-page ${viewMode === 'month' ? 'view-page--month' : 'view-page--week'}`}>
       <header className="view-header">
         <div>
           <h1>Grafik — podgląd</h1>
-          <p className="view-subtitle">Czytelnia grafiku dla lekarzy.</p>
+          <p className="view-subtitle">
+            {viewMode === 'week'
+              ? `Tydzień ${formatRangeLabel(weekStart)}`
+              : `Miesiąc ${monthLabel}`}
+          </p>
         </div>
         <div className="view-actions no-print">
           <button type="button" className="view-button" onClick={() => window.print()}>
@@ -777,10 +781,10 @@ export default function ViewPage() {
             const weekStatusValue = week?.status ?? 'missing';
             const weekStatusText =
               weekStatusValue === 'approved'
-                ? 'zatwierdzony'
+                ? 'Zatwierdzony'
                 : weekStatusValue === 'draft'
-                  ? 'roboczy'
-                  : 'brak tygodnia';
+                  ? 'Draft'
+                  : 'Brak tygodnia';
             return (
               <section key={start} className="view-week-block">
                 <header className="view-week-header">
