@@ -1001,7 +1001,7 @@ export default function SchedulePage() {
     setApprovalSuccess(null);
     setCopying(true);
 
-    const { error: copyError } = await supabase.rpc('copy_week_ward_absences', {
+    const { data: copyResult, error: copyError } = await supabase.rpc('copy_week_ward_absences', {
       p_target_week_id: week.id,
     });
 
@@ -1011,8 +1011,20 @@ export default function SchedulePage() {
       return;
     }
 
+    if (!copyResult || copyResult.ok === false) {
+      if (copyResult?.reason === 'SOURCE_EMPTY') {
+        setError('Poprzedni tydzień nie ma danych do skopiowania');
+      } else {
+        setError('Nie udało się skopiować danych.');
+      }
+      setCopying(false);
+      return;
+    }
+
     await loadAssignments(week.id);
-    setSaveMessage('Skopiowano');
+    setSaveMessage(
+      `Skopiowano (Oddział: ${copyResult.wardInserted ?? 0}, Nieobecności: ${copyResult.absInserted ?? 0})`,
+    );
     setCopying(false);
   };
 
