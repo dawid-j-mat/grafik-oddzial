@@ -1012,18 +1012,14 @@ export default function SchedulePage() {
     }
 
     if (!copyResult || copyResult.ok === false) {
-      if (copyResult?.reason === 'SOURCE_EMPTY') {
-        setError('Poprzedni tydzień nie ma danych do skopiowania');
-      } else {
-        setError('Nie udało się skopiować danych.');
-      }
+      setError(copyResult?.error ?? 'Nie udało się skopiować danych.');
       setCopying(false);
       return;
     }
 
     await loadAssignments(week.id);
     setSaveMessage(
-      `Skopiowano (Oddział: ${copyResult.wardInserted ?? 0}, Nieobecności: ${copyResult.absInserted ?? 0})`,
+      `Skopiowano: oddział ${copyResult.inserted_ward ?? 0}, nieobecności ${copyResult.inserted_absences ?? 0}, pominięto ${copyResult.skipped_due_to_admissions ?? 0} (kolizja z izbą).`,
     );
     setCopying(false);
   };

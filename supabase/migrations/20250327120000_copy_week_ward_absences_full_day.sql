@@ -12,6 +12,7 @@ declare
   v_absence_source_count int;
   v_ward_inserted int := 0;
   v_absence_inserted int := 0;
+  v_skipped_due_to_admissions int := 0;
 begin
   if not exists (
     select 1
@@ -19,7 +20,7 @@ begin
     where user_id = auth.uid()
       and role in ('planner', 'head')
   ) then
-    raise exception 'Brak uprawnień';
+    return jsonb_build_object('ok', false, 'error', 'Brak uprawnień');
   end if;
 
   select week_start
@@ -28,7 +29,7 @@ begin
   where id = p_target_week_id;
 
   if v_target_week_start is null then
-    raise exception 'Week not found';
+    return jsonb_build_object('ok', false, 'error', 'Week not found');
   end if;
 
   v_source_week_start := v_target_week_start - 7;
@@ -39,7 +40,7 @@ begin
   where week_start = v_source_week_start;
 
   if v_source_week_id is null then
-    raise exception 'Brak poprzedniego tygodnia do skopiowania';
+    return jsonb_build_object('ok', false, 'error', 'Brak poprzedniego tygodnia do skopiowania');
   end if;
 
   select count(*)
@@ -62,7 +63,7 @@ begin
   ) as abs_source;
 
   if v_ward_source_count = 0 and v_absence_source_count = 0 then
-    return jsonb_build_object('ok', false, 'reason', 'SOURCE_EMPTY');
+    return jsonb_build_object('ok', false, 'error', 'Poprzedni tydzień nie ma danych do skopiowania');
   end if;
 
   delete from public.assignments
@@ -80,11 +81,30 @@ begin
       and a.date between v_source_week_start and v_source_week_start + 4
   ),
   ward_slots as (
-    select ws.doctor_id, ws.date + 7 as date, 'AM'::text as slot
+    select
+      ws.doctor_id,
+      (v_target_week_start + (ws.date - v_source_week_start))::date as date,
+      'AM'::text as slot
     from ward_source as ws
     union all
-    select ws.doctor_id, ws.date + 7 as date, 'PM'::text as slot
+    select
+      ws.doctor_id,
+      (v_target_week_start + (ws.date - v_source_week_start))::date as date,
+      'PM'::text as slot
     from ward_source as ws
+  ),
+  admissions_conflicts as (
+    select ws.doctor_id, ws.date, ws.slot
+    from ward_slots as ws
+    where exists (
+      select 1
+      from public.assignments as t
+      where t.week_id = p_target_week_id
+        and t.date = ws.date
+        and t.slot = ws.slot
+        and t.doctor_id = ws.doctor_id
+        and t.status = 'ADMISSIONS'
+    )
   )
   insert into public.assignments (week_id, date, slot, doctor_id, status)
   select
@@ -100,10 +120,15 @@ begin
     where t.week_id = p_target_week_id
       and t.date = ws.date
       and t.slot = ws.slot
+      and t.doctor_id = ws.doctor_id
       and t.status = 'ADMISSIONS'
-  );
+  )
+  on conflict (week_id, date, slot, doctor_id) do nothing;
 
   get diagnostics v_ward_inserted = row_count;
+  select count(*)
+    into v_skipped_due_to_admissions
+  from admissions_conflicts;
 
   with abs_source as (
     select distinct x.doctor_id, x.date, x.reason, x.note
@@ -112,10 +137,20 @@ begin
       and x.date between v_source_week_start and v_source_week_start + 4
   ),
   abs_slots as (
-    select ax.doctor_id, ax.date + 7 as date, 'AM'::text as slot, ax.reason, ax.note
+    select
+      ax.doctor_id,
+      (v_target_week_start + (ax.date - v_source_week_start))::date as date,
+      'AM'::text as slot,
+      ax.reason,
+      ax.note
     from abs_source as ax
     union all
-    select ax.doctor_id, ax.date + 7 as date, 'PM'::text as slot, ax.reason, ax.note
+    select
+      ax.doctor_id,
+      (v_target_week_start + (ax.date - v_source_week_start))::date as date,
+      'PM'::text as slot,
+      ax.reason,
+      ax.note
     from abs_source as ax
   )
   insert into public.absences (week_id, date, slot, doctor_id, reason, note)
@@ -132,9 +167,13 @@ begin
 
   return jsonb_build_object(
     'ok', true,
-    'wardInserted', v_ward_inserted,
-    'absInserted', v_absence_inserted
+    'inserted_ward', v_ward_inserted,
+    'inserted_absences', v_absence_inserted,
+    'skipped_due_to_admissions', v_skipped_due_to_admissions
   );
+exception
+  when others then
+    return jsonb_build_object('ok', false, 'error', sqlerrm);
 end;
 $$;
 
