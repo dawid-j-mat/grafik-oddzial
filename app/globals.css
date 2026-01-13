@@ -400,3 +400,348 @@ h1 {
 ul {
   padding-left: 1.2rem;
 }
+
+.view-page {
+  max-width: 1320px;
+}
+
+.view-page--week {
+  max-width: 1200px;
+}
+
+.view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.view-subtitle {
+  color: #64748b;
+  margin-top: 0.4rem;
+}
+
+.view-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.view-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.view-toggle {
+  display: inline-flex;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 0.3rem;
+  gap: 0.4rem;
+  width: fit-content;
+}
+
+.view-toggle-button {
+  border: none;
+  background: transparent;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #475569;
+}
+
+.view-toggle-button.is-active {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.view-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.view-nav-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.view-nav-title {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.view-nav-range {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.view-button {
+  background: #ffffff;
+  border: 1px solid #cbd5f5;
+  border-radius: 999px;
+  padding: 0.45rem 1.1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #0f172a;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.view-button:hover {
+  border-color: #94a3b8;
+}
+
+.view-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.view-link:hover {
+  text-decoration: underline;
+}
+
+.view-login-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: #1f2937;
+  color: #ffffff;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.view-error {
+  color: #b91c1c;
+  background: #fee2e2;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+}
+
+.view-week,
+.view-week-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1.5rem;
+  background: #ffffff;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
+  margin-bottom: 1.5rem;
+}
+
+.view-month-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.view-week-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.view-week-header h2 {
+  margin: 0;
+}
+
+.view-week-range {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+}
+
+.view-status-badge {
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.view-status-badge--approved {
+  background: #e2f0ff;
+  color: #1d4ed8;
+}
+
+.view-status-badge--draft {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.view-status-badge--missing {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.view-week-days {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.view-week-days--month {
+  margin-top: 0.6rem;
+}
+
+.view-day-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.9rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.view-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.view-day-name {
+  font-size: 0.95rem;
+}
+
+.view-day-date {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.view-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.view-section--admissions {
+  gap: 0.3rem;
+}
+
+.view-section-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.view-admissions-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.view-slot-label {
+  color: #475569;
+  font-weight: 600;
+}
+
+.view-admissions-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.view-list-text {
+  margin: 0;
+  color: #1f2937;
+  font-size: 0.9rem;
+}
+
+.view-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #1f2937;
+  font-size: 0.85rem;
+}
+
+.view-variant {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.view-diff-badge {
+  align-self: flex-start;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.view-empty {
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px dashed #cbd5f5;
+}
+
+.view-muted {
+  color: #64748b;
+}
+
+@media (max-width: 1100px) {
+  .view-week-days {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
+
+@media print {
+  body {
+    padding: 0.8rem;
+    background: #ffffff;
+  }
+
+  main {
+    box-shadow: none;
+    padding: 0.8rem;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .view-week,
+  .view-week-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none;
+  }
+
+  .view-day-card {
+    padding: 0.5rem;
+    gap: 0.4rem;
+  }
+
+  .view-page--month {
+    font-size: 0.85rem;
+  }
+
+  .view-page--month .view-admissions-name {
+    font-size: 0.95rem;
+  }
+
+  .view-week-days {
+    gap: 0.5rem;
+  }
+}
